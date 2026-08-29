@@ -10,7 +10,7 @@ ncmp(NetEase Cloud Music Partner/网易云音乐合伙人)
 
 - 全自动完成音乐合伙人日常任务
   - 完成每日5个基础任务
-  - 完成每日7个额外评分任务
+  - 完成每日15个额外评分任务
 - 便捷的部署方式
   - 支持本地手动运行
   - 支持桌面图形界面（Tkinter，无需额外依赖）
@@ -122,7 +122,7 @@ ncmp(NetEase Cloud Music Partner/网易云音乐合伙人)
 1. 克隆仓库到本地：
 
    ```bash
-   git clone https://github.com/ACAne0320/ncmp.git
+   git clone https://github.com/AriamirRui/ncmp.git
    cd ncmp
    ```
 
@@ -234,7 +234,7 @@ python -m PyInstaller ncmp.spec --noconfirm --clean
 - 任务提交默认添加了 15-20 秒的等待时间，避免被检测异常
 - 建议使用 GitHub Actions 的定时任务功能，避免遗漏每日任务
 - 网易云音乐的 Cookie 两周左右就会过期，建议配置邮箱以便及时收到失效通知
-- Cookie 自动刷新使用了[该仓库](https://github.com/ACAne0320/ncma)的登陆API，如果害怕隐私泄露，可以自行fork该仓库并本地部署，将代码中刷新cookie的请求链接替换即可
+- Cookie 自动刷新使用了[ACAne0320/ncma](https://github.com/ACAne0320/ncma)的登陆API，如果害怕隐私泄露，可以自行fork该仓库并本地部署，将代码中刷新cookie的请求链接替换即可
 
 ## 声明
 
@@ -244,6 +244,7 @@ python -m PyInstaller ncmp.spec --noconfirm --clean
 
 ## 致谢
 
+- [ncmp](https://github.com/ACAne0320/ncmp)
 - [qinglong-sign](https://github.com/KotoriMinami/qinglong-sign)
 - [CloudMusicBot](https://github.com/C20C01/CloudMusicBot)
 - [NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
