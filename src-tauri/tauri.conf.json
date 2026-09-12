@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "网易云音乐合伙人",
+  "version": "2.0.0",
+  "identifier": "com.ariamirrui.ncmp",
+  "build": {
+    "frontendDist": "../web"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "网易云音乐合伙人 v2.0.0",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 920,
+        "minHeight": 620,
+        "resizable": true,
+        "center": true,
+        "decorations": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/ncmp-server"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"]
+      }
+    },
+    "shortDescription": "网易云音乐合伙人",
+    "longDescription": "基于 ACAne0320/ncmp 的桌面版：Tauri + Rust 外壳 + Web 前端 + Python sidecar"
+  }
+}

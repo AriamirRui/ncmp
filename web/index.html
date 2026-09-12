@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>网易云音乐合伙人</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--NCMP_BOOTSTRAP-->
+
+<div id="app" class="app">
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3z"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">网易云音乐合伙人</div>
+        <div class="brand-sub">NetEase Cloud Music Partner</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item is-active" data-page="run">
+        <span class="nav-ico">▶</span><span>运行控制</span>
+      </button>
+      <button class="nav-item" data-page="config">
+        <span class="nav-ico">⚙</span><span>配置</span>
+      </button>
+      <button class="nav-item" data-page="history">
+        <span class="nav-ico">🗂</span><span>运行历史</span>
+      </button>
+      <button class="nav-item" data-page="about">
+        <span class="nav-ico">ℹ</span><span>关于</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="conn" id="connState">
+        <span class="dot dot-warn"></span><span id="connText">连接后端…</span>
+      </div>
+      <div class="ver" id="verText">v2.0.0</div>
+    </div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="main">
+    <!-- 顶部栏 -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">运行控制</h1>
+        <span class="run-badge" id="runBadge">空闲</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" id="btnValidate">验证 Cookie</button>
+        <button class="btn btn-primary" id="btnRun">▶ 开始任务</button>
+        <button class="btn btn-danger" id="btnStop" disabled>■ 终止运行</button>
+      </div>
+    </header>
+
+    <!-- 提示横幅 -->
+    <div class="banner" id="banner" hidden>
+      <span id="bannerText"></span>
+      <button class="btn btn-small" id="bannerAction" hidden>去配置</button>
+    </div>
+
+    <!-- ================= 运行页 ================= -->
+    <section class="page is-active" id="page-run">
+      <div class="cards">
+        <div class="card">
+          <div class="card-label">账号状态</div>
+          <div class="card-value" id="accountState">未检测</div>
+          <div class="card-hint" id="accountHint">点击右上角「验证 Cookie」</div>
+        </div>
+        <div class="card">
+          <div class="card-label">用户昵称</div>
+          <div class="card-value" id="nickname">-</div>
+          <div class="card-hint" id="nicknameHint">运行任务后自动获取</div>
+        </div>
+        <div class="card">
+          <div class="card-label">每日评分任务</div>
+          <div class="card-value"><span id="dailyDone">0</span><span class="dim">/</span><span id="dailyTotal">5</span></div>
+          <div class="mini-bar"><i id="dailyBar" style="width:0%"></i></div>
+        </div>
+        <div class="card">
+          <div class="card-label">额外评分任务</div>
+          <div class="card-value"><span id="extraDone">0</span><span class="dim">/</span><span id="extraTotal">15</span></div>
+          <div class="mini-bar"><i id="extraBar" style="width:0%"></i></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="progress-head">
+          <span id="stageText">就绪</span>
+          <span class="mono" id="progressPct">0%</span>
+        </div>
+        <div class="progress"><i id="progressBar" style="width:0%"></i></div>
+        <div class="progress-foot">
+          <span id="lastResult" class="dim">尚无运行记录</span>
+          <div class="actions-inline">
+            <button class="btn btn-ghost btn-small" id="btnRefreshCookie">刷新 Cookie</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel log-panel">
+        <div class="panel-head">
+          <div class="panel-title">实时日志</div>
+          <div class="log-tools">
+            <select id="logFilter" class="select">
+              <option value="ALL">全部级别</option>
+              <option value="INFO">INFO 及以上</option>
+              <option value="WARNING">仅警告/错误</option>
+              <option value="ERROR">仅错误</option>
+            </select>
+            <input id="logSearch" class="input input-small" type="search" placeholder="搜索日志…">
+            <label class="switch"><input type="checkbox" id="autoScroll" checked><span>自动滚动</span></label>
+            <button class="btn btn-ghost btn-small" id="btnClearLog">清空</button>
+            <button class="btn btn-ghost btn-small" id="btnCopyLog">复制</button>
+          </div>
+        </div>
+        <div class="log" id="logBox"></div>
+        <div class="log-foot"><span id="logCount">0 行</span><span class="dim">日志同时保存在 data/history/</span></div>
+      </div>
+    </section>
+
+    <!-- ================= 配置页 ================= -->
+    <section class="page" id="page-config">
+      <form id="configForm" autocomplete="off">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">网易云账户 Cookie <span class="req">必需</span></div>
+            <label class="switch"><input type="checkbox" id="showCookie"><span>显示 Cookie</span></label>
+          </div>
+          <div class="field">
+            <label for="Cookie_MUSIC_U">MUSIC_U Cookie</label>
+            <input class="input mono" type="password" id="Cookie_MUSIC_U" name="Cookie_MUSIC_U" placeholder="登录 music.163.com 后从浏览器 Cookie 中复制">
+          </div>
+          <div class="field">
+            <label for="Cookie___csrf">__csrf Token</label>
+            <input class="input mono" type="password" id="Cookie___csrf" name="Cookie___csrf" placeholder="同一 Cookie 中的 __csrf 值">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">任务设置</div></div>
+          <div class="grid-3">
+            <div class="field">
+              <label for="wait_time_min">最短等待时间（秒）</label>
+              <input class="input" type="number" min="1" max="300" step="1" id="wait_time_min" name="wait_time_min">
+            </div>
+            <div class="field">
+              <label for="wait_time_max">最长等待时间（秒）</label>
+              <input class="input" type="number" min="1" max="300" step="1" id="wait_time_max" name="wait_time_max">
+            </div>
+            <div class="field">
+              <label for="score">评分策略</label>
+              <select class="select" id="score" name="score">
+                <option value="1">1-2 分</option>
+                <option value="2">2-3 分</option>
+                <option value="3">3-4 分（默认）</option>
+                <option value="4">固定 4 分</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint">评分策略按歌名是否含英文决定分数区间，等待时间用于规避风控。</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">邮件通知 <span class="opt">可选</span></div>
+            <label class="switch"><input type="checkbox" id="showMail"><span>显示密码</span></label>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="notify_email">通知邮箱</label>
+              <input class="input" type="text" id="notify_email" name="notify_email" placeholder="your.email@gmail.com">
+            </div>
+            <div class="field">
+              <label for="email_password">邮箱密码 / 授权码</label>
+              <input class="input" type="password" id="email_password" name="email_password">
+            </div>
+            <div class="field">
+              <label for="smtp_server">SMTP 服务器</label>
+              <input class="input" type="text" id="smtp_server" name="smtp_server" placeholder="smtp.gmail.com">
+            </div>
+            <div class="field">
+              <label for="smtp_port">SMTP 端口</label>
+              <input class="input" type="number" min="1" max="65535" id="smtp_port" name="smtp_port">
+            </div>
+          </div>
+          <p class="hint">Cookie 失效或任务失败时会向该邮箱发送提醒；Gmail 需使用应用专用密码。</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">自动登录 &amp; GitHub <span class="opt">可选，用于 Cookie 自动刷新</span></div>
+            <label class="switch"><input type="checkbox" id="showSecret"><span>显示密码</span></label>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="netease_phone">网易云音乐手机号</label>
+              <input class="input" type="text" id="netease_phone" name="netease_phone">
+            </div>
+            <div class="field">
+              <label for="netease_password">密码（明文，二选一）</label>
+              <input class="input" type="password" id="netease_password" name="netease_password">
+            </div>
+            <div class="field">
+              <label for="netease_md5_password">密码（MD5，推荐，二选一）</label>
+              <input class="input mono" type="password" id="netease_md5_password" name="netease_md5_password">
+            </div>
+            <div class="field">
+              <label for="gh_token">GitHub Personal Access Token</label>
+              <input class="input mono" type="password" id="gh_token" name="gh_token">
+            </div>
+            <div class="field field-wide">
+              <label for="gh_repo">GitHub 仓库（username/repo）</label>
+              <input class="input" type="text" id="gh_repo" name="gh_repo" placeholder="username/ncmp">
+            </div>
+          </div>
+          <p class="hint">配置后可在「运行控制」页点击「刷新 Cookie」，自动登录并更新仓库 Secrets。</p>
+        </div>
+      </form>
+
+      <div class="actionbar">
+        <button class="btn btn-primary" id="btnSave">保存配置</button>
+        <button class="btn btn-ghost" id="btnSaveVerify">保存并验证</button>
+        <button class="btn btn-ghost" id="btnReload">重新加载</button>
+        <button class="btn btn-ghost" id="btnOpenConfig">打开配置文件</button>
+        <span class="save-hint" id="saveHint"></span>
+      </div>
+    </section>
+
+    <!-- ================= 历史页 ================= -->
+    <section class="page" id="page-history">
+      <div class="history-layout">
+        <div class="panel history-list">
+          <div class="panel-head">
+            <div class="panel-title">运行记录</div>
+            <div class="log-tools">
+              <button class="btn btn-ghost btn-small" id="btnHistoryRefresh">刷新</button>
+              <button class="btn btn-ghost btn-small" id="btnOpenLogs">打开日志文件夹</button>
+              <button class="btn btn-danger btn-small" id="btnHistoryDelete" disabled>删除所选</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>时间</th><th>类型</th><th>结果</th><th>摘要</th></tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+            <div class="empty" id="historyEmpty">暂无运行记录，去「运行控制」开始一次任务吧。</div>
+          </div>
+        </div>
+        <div class="panel history-detail">
+          <div class="panel-head">
+            <div class="panel-title" id="historyTitle">日志详情</div>
+            <div class="log-tools">
+              <button class="btn btn-ghost btn-small" id="btnCopyHistory">复制</button>
+            </div>
+          </div>
+          <div class="log log-static" id="historyLog"><div class="empty">选择左侧记录查看完整日志</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 关于页 ================= -->
+    <section class="page" id="page-about">
+      <div class="panel about">
+        <h2>网易云音乐合伙人 <span class="dim" id="aboutVersion">v2.0.0</span></h2>
+        <p>基于 <a href="https://github.com/ACAne0320/ncmp" target="_blank" rel="noreferrer">ACAne0320/ncmp</a> 开发，
+           使用 <strong>Tauri + Rust 外壳 + Web 前端 + Python sidecar</strong> 架构。</p>
+        <ul class="about-list">
+          <li><b>Rust 外壳</b>：负责窗口、进程守护与 WebView 容器</li>
+          <li><b>Web 前端</b>：深色界面、实时日志（SSE）、任务进度与终止</li>
+          <li><b>Python sidecar</b>：复用原有评分任务逻辑，仅监听本机 127.0.0.1</li>
+        </ul>
+        <div class="kv">
+          <div><span class="dim">后端地址</span><code id="aboutApi">-</code></div>
+          <div><span class="dim">数据目录</span><code id="aboutRoot">-</code></div>
+          <div><span class="dim">运行模式</span><code id="aboutMode">-</code></div>
+        </div>
+        <p class="hint">本工具仅供学习交流使用，使用产生的一切后果由使用者自行承担。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- 确认对话框 -->
+<div class="modal-mask" id="modalMask" hidden>
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">确认</div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="modalCancel">取消</button>
+      <button class="btn btn-danger" id="modalOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -4,10 +4,17 @@ config/setting.json
 # 运行历史记录
 data/
 
-# 打包产物（build_exe.bat 生成）
+# 打包产物（build_exe.bat / build_sidecar.bat / build_tauri.bat 生成）
 build/
 dist/
+dist-sidecar/
 assets/ncmp.ico
+
+# Tauri / Node 构建产物
+node_modules/
+src-tauri/target/
+src-tauri/binaries/
+src-tauri/gen/
 
 # Python
 __pycache__/

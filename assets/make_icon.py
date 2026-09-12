@@ -61,6 +61,31 @@ def _make_image(n: int) -> bytes:
     return bmih + bytes(pixels) + and_mask
 
 
+def _make_png(n: int) -> bytes:
+    """生成 n×n 的 PNG（RGBA，仅依赖标准库 zlib）。"""
+    import zlib
+
+    raw = bytearray()
+    for y in range(n):
+        raw.append(0)  # filter type 0
+        for x in range(n):
+            if not _inside_rounded(x + 0.5, y + 0.5, n):
+                raw += bytes((0, 0, 0, 0))
+                continue
+            color = FG if _inside_note(x + 0.5, y + 0.5, n) else BG
+            raw += bytes((color[0], color[1], color[2], 255))
+
+    def chunk(tag: bytes, payload: bytes) -> bytes:
+        body = tag + payload
+        return (struct.pack(">I", len(payload)) + body
+                + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF))
+
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", n, n, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+            + chunk(b"IEND", b""))
+
+
 def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
@@ -84,6 +109,19 @@ def main():
 
     total = os.path.getsize(OUT)
     print(f"[OK] icon generated: {OUT} ({total} bytes, sizes={SIZES})")
+
+    # 同步给 Tauri 外壳（icon.ico + icon.png）
+    tauri_icons = os.path.join(ROOT, "src-tauri", "icons")
+    try:
+        os.makedirs(tauri_icons, exist_ok=True)
+        with open(OUT, "rb") as src, open(os.path.join(tauri_icons, "icon.ico"), "wb") as dst:
+            dst.write(src.read())
+        png = _make_png(256)
+        with open(os.path.join(tauri_icons, "icon.png"), "wb") as dst:
+            dst.write(png)
+        print(f"[OK] tauri icons: {tauri_icons}\\icon.ico, icon.png ({len(png)} bytes)")
+    except Exception as e:
+        print(f"[WARN] failed to write tauri icons: {e}")
 
 
 if __name__ == "__main__":

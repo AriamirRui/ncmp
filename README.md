@@ -1,6 +1,6 @@
 # ncmp
 
-> 本项目基于 [ACAne0320/ncmp](https://github.com/ACAne0320/ncmp) 开发，在保留原版全部功能的基础上，增加了桌面图形界面（Tkinter）、Windows EXE 一键打包、任务实时进度显示与手动终止运行等功能。
+> 本项目基于 [ACAne0320/ncmp](https://github.com/ACAne0320/ncmp) 开发，在保留原版全部功能的基础上，采用 **Tauri + Rust 外壳 + Web 前端 + Python sidecar** 架构重写了桌面界面，并支持 Windows EXE 一键打包、任务实时进度显示与手动终止运行等功能。
 
 ncmp(NetEase Cloud Music Partner/网易云音乐合伙人)
 
@@ -12,14 +12,78 @@ ncmp(NetEase Cloud Music Partner/网易云音乐合伙人)
   - 完成每日5个基础任务
   - 完成每日15个额外评分任务
 - 便捷的部署方式
-  - 支持本地手动运行
-  - 支持桌面图形界面（Tkinter，无需额外依赖）
+  - 支持本地手动运行（命令行）
+  - 支持桌面应用：Tauri 外壳 + Web 界面（深色主题、实时日志、任务进度、可终止）
+  - 支持浏览器模式（`python -m src.server` 直接使用同一套界面）
   - 支持一键打包为 Windows EXE（双击即用，无需安装 Python）
   - 支持 GitHub Actions 自动执行
 - 完善的通知机制
   - Cookie 失效自动发送邮件提醒
 - 一次配置持续使用
   - 支持自动登录账号并刷新Cookie，基于[NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
+
+## 界面架构
+
+```
+┌──────────────────────────────────────────────┐
+│  Tauri 外壳（Rust）                           │
+│  · 窗口 / WebView2 容器                       │
+│  · 启动并守护 Python sidecar，退出时回收进程     │
+│  · 分配随机端口 + 访问令牌，交给前端             │
+├──────────────────────────────────────────────┤
+│  Web 前端（web/ 原生 HTML/CSS/JS，无需构建）    │
+│  · 运行控制 / 配置 / 运行历史 / 关于            │
+│  · SSE 实时日志与任务进度，一键终止任务          │
+├──────────────────────────────────────────────┤
+│  Python sidecar（ncmp-server，仅监听本机）      │
+│  · HTTP API + SSE，复用原有评分任务逻辑          │
+│  · 配置文件与运行日志读写（config/、data/）      │
+└──────────────────────────────────────────────┘
+```
+
+- sidecar 只监听 `127.0.0.1`，并使用启动时随机生成的令牌鉴权（`X-NCMP-Token`）
+- 配置、日志仍保存在程序目录下的 `config/`、`data/`，与原版保持一致
+
+### 目录结构
+
+```
+ncmp/
+├── main.py                  # 命令行入口（python main.py）
+├── gui.py                   # Tkinter 界面入口（python gui.py，旧版界面）
+├── sidecar_main.py          # Python 后端打包入口（PyInstaller）
+├── src/
+│   ├── core/                # 评分任务核心逻辑（与原版一致）
+│   │   ├── pipeline.py      # 通用执行流程（命令行 / 界面 / 后端共用）
+│   │   ├── bot.py           # 主流程编排
+│   │   ├── signer.py        # 网易云加密与评分请求
+│   │   ├── exceptions.py    # 终止任务异常与可中断等待
+│   │   └── tasks/           # 每日任务 / 额外任务 / Cookie 刷新
+│   ├── server/              # Web 后端（HTTP API + SSE）
+│   ├── store/               # 运行历史读写
+│   ├── ui/                  # Tkinter 旧版界面 + 运行器
+│   ├── utils/               # 配置、日志、通知、路径
+│   └── validators/          # Cookie 校验
+├── web/                     # Web 前端（原生 HTML/CSS/JS，无构建步骤）
+├── src-tauri/               # Tauri 外壳（Rust）
+│   ├── src/main.rs          # 窗口 + sidecar 托管
+│   ├── tauri.conf.json      # 应用配置
+│   └── binaries/            # 放入 ncmp-server-<triple>.exe（由脚本生成）
+├── assets/make_icon.py      # 生成 ico/png 图标（纯标准库）
+├── build_sidecar.bat        # 构建 Python 后端
+├── build_tauri.bat          # 构建 Tauri 桌面应用
+├── build_exe.bat            # 构建 Tkinter 版单文件 EXE
+├── ncmp-server.spec         # 后端 PyInstaller 配置
+└── ncmp.spec                # Tkinter 版 PyInstaller 配置
+```
+
+### 构建桌面应用的前置条件
+
+| 组件 | 用途 | 安装方式 |
+| --- | --- | --- |
+| Python 3.9+ | 后端与打包 | [python.org](https://www.python.org/downloads/) |
+| Rust（stable-msvc） | 编译 Tauri 外壳 | [rustup.rs](https://rustup.rs/) |
+| Node.js（可选） | 提供 Tauri CLI | [nodejs.org](https://nodejs.org/)（或用 `cargo install tauri-cli`） |
+| Microsoft Edge WebView2 | 渲染界面 | Windows 10/11 通常已内置 |
 
 ## 使用前准备
 
@@ -166,27 +230,53 @@ ncmp(NetEase Cloud Music Partner/网易云音乐合伙人)
    python main.py
    ```
 
-### 方式二：桌面图形界面
+### 方式二：桌面应用（Tauri，推荐）
 
-无需安装额外依赖（Tkinter 随 Python 官方安装包自带）：
+Rust 外壳 + Web 前端 + Python sidecar。Windows 上一条命令完成构建：
 
 ```bash
-python gui.py
-# 或
-python main.py --gui
+build_sidecar.bat    # 1. 打包 Python 后端 (ncmp-server.exe) 并放入 src-tauri/binaries/
+build_tauri.bat      # 2. 构建桌面应用（内部会自动调用上一步）
 ```
 
-图形界面包含三个页签：
+产物：
 
-- **运行**：显示账号状态 / 用户昵称 / 任务进度，支持一键「验证 Cookie」「开始任务」「刷新 Cookie」，日志实时滚动展示，按钮执行期间自动锁定，防止重复运行
-- **配置**：在线编辑全部配置项（Cookie、等待时间、评分策略、邮件通知、自动登录与 GitHub 信息），保存后自动写入 `config/setting.json`
-- **历史**：每次运行的结果与完整日志自动保存在 `data/history/` 目录，可随时查看或删除
+- 免安装可执行文件：`src-tauri/target/release/ncmp.exe`
+- 安装包（NSIS）：`src-tauri/target/release/bundle/nsis/`
 
-> 提示：图形界面读取的是项目根目录 `config/setting.json`，请在项目根目录下启动。
+前端资源、Python 后端都会被打进应用，运行时不依赖本机 Python 环境。
 
-### 方式三：打包为 Windows EXE
+**开发模式**（改前端即时生效，无需重新编译 Rust）：
 
-在 Windows 上使用 PyInstaller 一键打包成免安装的单文件 EXE：
+```bash
+# 终端 1：启动 Python 后端（随机端口，控制台会打印地址与令牌）
+python -m src.server --open-browser
+
+# 终端 2（可选）：直接调试 Tauri 外壳
+npx tauri dev
+```
+
+### 方式三：浏览器模式（无需 Rust）
+
+只想用界面、不想装 Rust 时，后端本身就带界面：
+
+```bash
+python -m src.server --open-browser
+```
+
+控制台会输出访问地址（含令牌），浏览器打开即为完整界面。手机上想远程查看时，可用
+`python -m src.server --host 0.0.0.0 --port 8765 --print-token`（注意：会暴露到局域网，请自行评估风险）。
+
+界面包含四个页面：
+
+- **运行控制**：账号状态 / 用户昵称 / 每日与额外任务进度卡片、总进度条、实时日志（级别过滤、搜索、复制）、一键「验证 Cookie」「开始任务」「终止运行」「刷新 Cookie」
+- **配置**：分组表单在线编辑全部配置项（Cookie、等待时间、评分策略、邮件通知、自动登录与 GitHub），敏感字段默认掩码显示，支持「保存并验证」
+- **运行历史**：每次运行的结果与完整日志保存在 `data/history/`，可查看、删除、打开日志文件夹
+- **关于**：架构说明、后端地址、数据目录、运行模式
+
+### 方式四：打包为 Windows EXE（Tkinter 旧版界面）
+
+原 Tkinter 界面仍保留可用，同样可打包为单文件 EXE：
 
 ```bash
 build_exe.bat
@@ -206,7 +296,9 @@ python -m PyInstaller ncmp.spec --noconfirm --clean
 - 运行记录与日志保存在 exe 同目录的 `data/history/` 下
 - exe 为单文件版，首次启动解压约需几秒，属正常现象
 
-### 方式四：GitHub Actions 自动执行
+> Tkinter 界面源码位于 `src/ui/`，启动命令为 `python gui.py`；新功能（如终止运行）在两侧界面均已支持。
+
+### 方式五：GitHub Actions 自动执行
 
 1. Fork 本仓库到你的 GitHub 账号
 
@@ -248,3 +340,4 @@ python -m PyInstaller ncmp.spec --noconfirm --clean
 - [qinglong-sign](https://github.com/KotoriMinami/qinglong-sign)
 - [CloudMusicBot](https://github.com/C20C01/CloudMusicBot)
 - [NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
+- [Tauri](https://tauri.app/)（Rust 外壳与 WebView 容器）
